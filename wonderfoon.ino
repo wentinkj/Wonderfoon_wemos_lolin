@@ -3,51 +3,51 @@
  * http://wonderfoon.eu
  * WEMOS version
  * 
- * 
+ *  TEST VERSION, derived from https://github.com/hvtil/Wonderfoon_wemos_lolin
  *--------------------------------------------------------------------------------------------------
  */
+#define DEBUGON
 #include <EEPROM.h>
 #include "ESP8266WiFi.h"
 #include "wonderfoon.h"
 
-#define DEBUGON
+// IO-PIN configuration
 
-#define VOLUMEDEFAULT 15
-#define FOLDERDEFAULT 1
-#define RANDOMDEFAULT false
+// connected to phone hook 
+const byte hookPin   = 14;
+// connected to rotary disc to detect the dial start
+const byte dialPin   = 13;
+// connected to rotary disc to count pulses (dialed digit)
+const byte pulsePin  = 12;
+// connected to MP3 module busy pin to check if still playing
+const byte busyPin   = 16;
 
 // STATE
 byte buttons[] = {hookPin, dialPin, pulsePin};
-#define NUMBUTTONS sizeof(buttons)
-volatile byte pressed[NUMBUTTONS], justreleased[NUMBUTTONS], justpressed[NUMBUTTONS];
+volatile byte pressed[sizeof(buttons)];
 
 bool continuousPlay = false;
 bool randomPlay = RANDOMDEFAULT;
 byte folderNumber = FOLDERDEFAULT;
 byte audioVolume = VOLUMEDEFAULT;
+int dialedPhoneNumber = 0;
 
-
-
+/*******************************************************************
+*  The function/typedef name
+*
+* Description of the function/typedef purpose
+*******************************************************************/
 void setup() {
   delay(100);
   EEPROM.begin(256);                     // using 0-20 max
   Serial.begin(9600);                    // start serial for debug and mp3
   copyStateFromEEPROM(false);
-  debug("Booting");                      // 2 debuglines that will always be displayed in logging.
+  debug("Booting");
 
-  // button setup
-  pinMode(hookPin, INPUT_PULLUP);                 //Set pins to input and add pullup resitor
-  pinMode(dialPin, INPUT_PULLUP);
-  pinMode(pulsePin, INPUT_PULLUP);
-
-//  // Setup for Numpad.b
-//  for (int thisPin = 0; thisPin < (sizeof(rowPin) / sizeof(rowPin[0])); thisPin++) {  // Set pins to input and add pullup resitor
-//    pinMode(rowPin[thisPin], INPUT_PULLUP);
-//  }
-//  //
-//  for (int thisPin = 0; thisPin < (sizeof(colPin) / sizeof(colPin[0])) ; thisPin++) { // Set pins to input and add pullup resitor
-//    pinMode(colPin[thisPin], INPUT_PULLUP);
-//  }
+  // button setup, set the pins to input and add pullup resitor
+  for (int idx=0; idx < sizeof(buttons); idx++) {
+    pinMode(buttons[idx], INPUT_PULLUP);
+  }
 
   MP3Wake();
   MP3Volume(audioVolume);
@@ -56,64 +56,81 @@ void setup() {
   debug("Start");
   playFeedback(FEEDBACK_VOLUME_BASE + audioVolume);
   playFeedback(randomPlay ? FEEDBACK_RANDOM_ON : FEEDBACK_RANDOM_OFF);
-  playFeedback(FEEDBACK_FOLDER1 + folderNumber - 1);      // play folder number status
+  playFeedback(FEEDBACK_FOLDER1);      // play folder number status
   MP3Sleep();                                             // set mp3 to battry save mode
   debug("Ready....");
 }
 
+/*******************************************************************
+*  loop
+*
+* main program loop which checks the different situations which could occur
+*******************************************************************/
 // wait for someone to pick up the hook
 void loop() {
   static byte pulseCount;
-  check_inputs();
+  static byte hookPrevious = false;
+  static byte dialPrevious = false;
+  static byte pulsePrevious = false;
 
-  // hook is picked up
-  if (justpressed[0]) {
-    debug("The hook is picked up");         // only when hookstate changes and goes to low
-    continuousPlay = false;
-    MP3Wake();
-    MP3Volume(audioVolume);
-    playTrackInFolder(FEEDBACK_DIALTONE, FEEDBACK_FOLDER);
-  }
-  
-  // the hook is down
-  if (justreleased[0]) {
-    debug("The hook is down on the phone");
-    MP3Stop();
-    MP3Sleep();
-  }
-
-  // dial start
-  if (justpressed[1]) {
-    debug("dial start")
-    pulseCount = 0;
+  /* hook is picked up
+   */
+  checkinput(0, 50);
+  if (pressed[0] != hookPrevious) {
+    if (pressed[0]) {
+      debug("The hook is picked up");
+      continuousPlay = false;
+      MP3Wake();
+      MP3Volume(audioVolume);
+      playTrackInFolder(FEEDBACK_DIALTONE, FEEDBACK_FOLDER);
+    } else {
+      debug("The hook is down on the phone");
+      MP3Stop();
+      MP3Sleep();
+    }
+    hookPrevious = pressed[0];
   }
 
-  // dial end
-  if (justreleased[1]) {
-    debug("dial end");
-    // check hook state to see if the number should be processed
-    if (!pressed[0])
-      return;
-      
-    // check pulseCount
-    int dialed = addDigitToPhoneNumber(pulseCount);
-    debug("dialed "  + String(dialed));
-    if (!checkDialCommands(dialed)) {
-      // if random play
-      if (randomPlay) {
-        playRandom();
-      } else {
-        debug("playing song " + dialed);
+  checkinput(1, 50);
+  if (pressed[1] != dialPrevious) {
+    if (pressed[1]) {
+      debug("dial start");
+      pulseCount = 0;
+    } else {
+      debug("dial end");
+      // only process if hook is up
+      if (pressed[0]) {
+        addDigitToPhoneNumber(pulseCount);
+        debug("dialed "  + String(dialedPhoneNumber));
+        // check and execute special numbers
+        if (!checkDialCommands(dialedPhoneNumber)) {
+          if (randomPlay) {
+            playRandom();
+          } else {
+            debug("playing song " + String(dialedPhoneNumber % 10));
+            playTrackInFolder(dialedPhoneNumber % 10, folderNumber);
+          }
+        } else {
+          // clear dialed
+          dialedPhoneNumber = 0;
+        }
       }
+    }
+    dialPrevious = pressed[1];
+  }
+
+  /* pulse count
+   */
+  checkinput(2, 20);
+  if (pressed[2] != pulsePrevious) {
+    pulsePrevious = pressed[2];
+    if (pressed[2] && pressed[1]) {
+      pulseCount++;
     }
   }
 
-  // pulse count
-  if (justpressed[2]) {
-    pulseCount++;
-  }
-
-  // if continuous play is enabled and the hook is picked up
+  /* if continuous play is enabled and the hook is picked up
+   */
   if (continuousPlay && pressed[0]) {
     // and not playing, get the next song
     if (digitalRead(busyPin) == 1) {
@@ -125,6 +142,11 @@ void loop() {
 }
 
 
+/*******************************************************************
+*  copyStateFromEEPROM
+*
+* 
+*******************************************************************/
 // initialize to check if this is the first time the Wonderfoon is started addess 100 = 77
 void copyStateFromEEPROM(bool forceDefaults) {
   EEPROM_init(forceDefaults); 
@@ -133,54 +155,61 @@ void copyStateFromEEPROM(bool forceDefaults) {
   randomPlay = EEPROM_getValue(ADDRRANDOM);
 }
 
-void check_inputs() {
-  static byte previousstate[NUMBUTTONS];
-  static byte currentstate[NUMBUTTONS];
-  static long lasttime = 0;
 
-  if (millis() < lasttime) {  // in case of rollover
-    lasttime = millis();
-    return;
+/*******************************************************************
+*  check_inputs
+*
+* reads and describes the states of the inputpins
+* attempts to debounce the inputs loosely based on: 
+* https://blog.adafruit.com/2009/10/20/example-code-for-multi-button-checker-with-debouncing/
+*******************************************************************/
+bool checkinput(int idx, int debounce) {
+  static byte previousstate[sizeof(buttons)];
+  static byte currentstate[sizeof(buttons)];
+  static long lasttime[sizeof(buttons)];
+  
+  if (   lasttime[idx] > millis()
+      || previousstate[idx] != currentstate[idx]) {
+      lasttime[idx] = millis();
   }
-  if (millis() - lasttime < 30) {
-    return;
-  }
-  lasttime = millis();
 
-  for (int idx = 0; idx < NUMBUTTONS; idx++) {
-    justreleased[idx] = 0;
+  if (millis() - lasttime[idx] > debounce) {
     currentstate[idx] = digitalRead(buttons[idx]);
-
     if (currentstate[idx] == previousstate[idx]) {
-      if ((pressed[idx] == LOW) && (currentstate[idx] == LOW)) {
-          justpressed[idx] = 1;
-      }
-      else if ((pressed[idx] == HIGH) && (currentstate[idx] == HIGH)) {
-          justreleased[idx] = 1;
-      }
-      pressed[idx] = !currentstate[idx];  // remember, digital HIGH means NOT pressed
+      pressed[idx] = (currentstate[idx] == LOW);
+    } else {
+      lasttime[idx] = millis();
     }
-    previousstate[idx] = currentstate[idx];   // keep a running tally of the buttons
-
   }
+  previousstate[idx] = currentstate[idx];
+  return pressed[idx];
 }
 
+/*******************************************************************
+*  addDigitToPhoneNumber
+*
+* combines the new digit with the existing (if dialed within 10 seconds)
+*******************************************************************/
 int addDigitToPhoneNumber(int digit) {
-  static int number = 0;
   static long firstDial = 0;
 
   // allow for 10 seconds to dial a number
   if (millis() - firstDial > 10000) {
     firstDial = millis();
-    number = digit;
+    dialedPhoneNumber = digit;
   } else { 
-    number = (number * 10) + digit;
+    dialedPhoneNumber = (dialedPhoneNumber * 10) + digit;
   }
 
   // only the last 3 digits are relevant
-  return (number % 1000);
+  return (dialedPhoneNumber % 1000);
 }
 
+/*******************************************************************
+*  checkDialCommands
+*
+* check (and execute) commands given by dialing a number
+*******************************************************************/
 bool checkDialCommands(int dialed) {
   switch (dialed) {
     case 112:
@@ -203,30 +232,27 @@ bool checkDialCommands(int dialed) {
       audioVolume = (dialed - 201); // -210 + 9
       debug("volume " + String(audioVolume));
       MP3Volume(audioVolume);
+      EEPROM_storeValue(ADDRVOLUME, audioVolume);
+      playFeedback(dialed - 190); // 21 -30 for feedack
       return true;
     case 311:
-      debug("folder 1");
-      playFeedback(FEEDBACK_FOLDER1);
-      folderNumber = 1;
-      return true;      
     case 312:
-      debug("folder 2");
-      playFeedback(FEEDBACK_FOLDER2);      
-      folderNumber = 2;
-      return true;
     case 313:
-      debug("folder 3");
-      playFeedback(FEEDBACK_FOLDER3);
-      folderNumber = 3;
+      debug("folder change");
+      folderNumber = dialed % 10;
+      EEPROM_storeValue(ADDRFOLDER, folderNumber);
+      playFeedback(FEEDBACK_FOLDER1 + folderNumber - 1);
       return true;
     case 411:
       debug("play random off");
       randomPlay = false;
+      EEPROM_storeValue(ADDRRANDOM, randomPlay);
       playFeedback(FEEDBACK_RANDOM_OFF);      
       return true;
     case 412:
       debug("play random on");
       randomPlay = true;
+      EEPROM_storeValue(ADDRRANDOM, randomPlay);
       playFeedback(FEEDBACK_RANDOM_ON);
       return true;
     case 511:
@@ -244,25 +270,45 @@ bool checkDialCommands(int dialed) {
   return false;
 }
 
-/*--------------------------------------------------------------------------------------------------
- * function_mp3
- * 
- *--------------------------------------------------------------------------------------------------
- */
-
+/*******************************************************************
+*  MP3Sleep
+*
+* Let the MP3 module sleep if not used
+*******************************************************************/
 void MP3Sleep() {
   MP3_execute(MP3CMD_PLAYMODUS, 0, MP3CMD_SLEEP, MP3CMD_DEFAULTDELAY); // Set MP3 player in sleep mode
   MP3_execute(0x0A, 0, 0, MP3CMD_DEFAULTDELAY); // Set MP3 player in power loss
 }
 
+void MP3Volume(int volume) { MP3_execute(MP3CMD_VOLUME, 0, volume, MP3CMD_DEFAULTDELAY); }
+void MP3Stop() { MP3_execute(MP3CMD_STOPPLAY, 0, 0, MP3CMD_DEFAULTDELAY); }
+void MP3Wake() { MP3_execute(MP3CMD_PLAYMODUS, 0, MP3CMD_PLAYSD, 500 + MP3CMD_DEFAULTDELAY); }
+
+
+void playFeedback (int feedbackTrack) {
+  playTrackInFolder(feedbackTrack, FEEDBACK_FOLDER);
+  delay(2000);
+}
+
+/*******************************************************************
+*  playTrackInFolder
+*
+* wrapper or MP3_execute to play a track in a folder on the SD-card
+*******************************************************************/
 void playTrackInFolder(int track, int folder) {
   debug( "playTrackInFolder" + String(track) + "-" + String(folder));
   MP3_execute(MP3CMD_PLAYTRACK, folder, track, MP3CMD_DEFAULTDELAY);
 }
 
+
+/*******************************************************************
+*  MP3_execute
+*
+* Send serial command to the MP3 module
+*******************************************************************/
 // Excecute the command and parameters
 void MP3_execute(byte command, byte param1, byte param2, int delayafter) {
-//  debug("CMD " + String(CMD) + " - " + String (param1) + " - " + String(param2));
+  debug("MP3CMD " + String(command) + " - " + String (param1) + " - " + String(param2));
   word checksum = -(MP3CMD_VERSIONBYTE + MP3CMD_LENGTH + command + MP3CMD_ACKNOWLEDGE + param1 + param2);   // Calculate the checksum (2 bytes)
   byte cammand_line[10] = { MP3CMD_STARTBYTE
                           , MP3CMD_VERSIONBYTE
@@ -281,17 +327,12 @@ void MP3_execute(byte command, byte param1, byte param2, int delayafter) {
   delay(delayafter);
 }
 
-/*--------------------------------------------------------------------------------------------------
- * function_EEprom
- * 
- *--------------------------------------------------------------------------------------------------
- */
-//EEPROM
 
-//   Stores values read from analog input 0 into the EEPROM.
-//   These values will stay in the EEPROM when the board is
-//   turned off and may be retrieved later by another sketch.
-
+/*******************************************************************
+*  EEPROM_init
+*
+* check if not initialised or forced initalisation then store default values
+*******************************************************************/
 void EEPROM_init(bool force) {
   debug("EEPROM_init");
   int initRead = EEPROM_getValue(ADDRINITIALISED);
@@ -304,14 +345,24 @@ void EEPROM_init(bool force) {
   EEPROM.commit();
 }
 
-void EEPROM_clear(){
+/*******************************************************************
+*  EEPROM_clear
+*
+* Overwrites the addresses in the EEPROM
+*******************************************************************/
+void EEPROM_clear() {
  for (int L = 0; L < 7; ++L) {
     EEPROM.write(0 + L, 254);
   }
-  EEPROM.write(100, 254);
+  EEPROM.write(ADDRINITIALISED, 254);
   EEPROM.commit();
-  }
+}
 
+/*******************************************************************
+*  EEPROM_storeValue
+*
+* Store an int value at the given EEPROM address
+*******************************************************************/
 int EEPROM_storeValue(int address, int value) {
   EEPROM.write(address, value);
   delay(500);  // delay to prevent crashes during storing data
@@ -320,87 +371,12 @@ int EEPROM_storeValue(int address, int value) {
   return value;
 }
 
+/*******************************************************************
+*  EEPROM_getValue
+*
+* Retrieve the value from the EEPROM for the given address
+*******************************************************************/
 int EEPROM_getValue(int address) {
   byte val = EEPROM.read(address);
   return (int) val;
 }
-
-/*--------------------------------------------------------------------------------------------------
- * function_numpad
- * 
- *--------------------------------------------------------------------------------------------------
- */
-
-///  Numpad type 1  4x3 numpad 7 wire and ground
-//void checkNumPad() {
-//  delay(20);                                     // check every 20 ms
-//  int czer = 0;                                  // reset column
-//  int rzer = 0;                                  // reset row
-//
-//  for (int thisRow = 0; thisRow < (sizeof(row) / sizeof(row[0])); thisRow++) {
-//    row[thisRow] = digitalRead(rowPin[thisRow]);                                  // read if a row is pressed
-//    if (row[thisRow] == 0 && rzer == 0)
-//    {
-//      rzer = 1;
-//      break;
-//    }
-//  }
-//  //debug("");
-//  //debug1(" col ");
-//  for (int thisCol = 0; thisCol < (sizeof(col) / sizeof(col[0])) ; thisCol++) {
-//    col[thisCol] = digitalRead(colPin[thisCol]);                                   // read if a col is pressed
-//    if (col[thisCol] == 0 && czer == 0)
-//    {
-//      czer = 1;
-//      break;
-//    }
-//  }
-//
-//  if (czer && rzer) {                                                             // if both are 1 ( to prevent the reading of the row and col half way between row and col a change was happening.
-//    PlayingContinuesly = false ;
-//    num = numPad[arrayFind("row")][arrayFind("col")] ;                            // find the number that belongs to this combination of row and col in the numPad array
-//
-//    if (num > 10 ) {                                                              // 11 and 12 are * and #
-//      num = 0;
-//    }
-//    //debug(String (num));
-//    debug("Number = " + String(num));
-//    if (num != 0 && num != lastNum) {       // 0=no button pressed lastNum to check if number changed
-//      mp3Wake();                            // Wake up MP3 since hook is picked up
-//      playTrackInFolder(num, folderNumber);                      // Play song
-//      addLastNumber(num);                   // add last dailed number for pin array
-//      addLastTime(millis());                // add last time for pin
-//      lastNum = num;
-//    }
-//  }
-//  else lastNum = 0;                         // if button is
-//  // debug("");
-//  debug(String(lastNum));
-//}
-//
-//int arrayFind(String type) {
-//
-//  int wantedVal = 0;
-//  int wantedPos = 5 ;
-//  if ( type == "row") {
-//
-//    for (int i = 0; i < 4; i++) {
-//
-//      if (wantedVal == row[i]) {
-//        wantedPos = i;
-//        break;
-//      }
-//    }
-//  }
-//  else {
-//    for (int i = 0; i < 3; i++) {
-//
-//      if (wantedVal == col[i]) {
-//        wantedPos = i;
-//        break;
-//      }
-//    }
-//  }
-//
-//  return wantedPos;
-//}
