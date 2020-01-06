@@ -3,7 +3,7 @@
 
 Settings::Settings() {
   EEPROM.begin(256); // using 0-20 max
-  this->EEPROM_init(false); 
+  this->EEPROM_init(false);
   this->folderNumber = this->EEPROM_getValue(ADDRFOLDER);
   this->audioVolume = this->EEPROM_getValue(ADDRVOLUME);
   this->randomPlay = this->EEPROM_getValue(ADDRRANDOM);
@@ -42,9 +42,9 @@ boolean Settings::isRandom() {
 
 
 /*******************************************************************
-*  EEPROM_init
-*
-* check if not initialised or forced initalisation then store default values
+   EEPROM_init
+
+  check if not initialised or forced initalisation then store default values
 *******************************************************************/
 void Settings::EEPROM_init(bool force) {
   int initRead = EEPROM_getValue(ADDRINITIALISED);
@@ -57,12 +57,12 @@ void Settings::EEPROM_init(bool force) {
 }
 
 /*******************************************************************
-*  EEPROM_clear
-*
-* Overwrites the addresses in the EEPROM
+   EEPROM_clear
+
+  Overwrites the addresses in the EEPROM
 *******************************************************************/
 void Settings::EEPROM_clear() {
- for (int L = 0; L < 7; ++L) {
+  for (int L = 0; L < 7; ++L) {
     EEPROM.write(0 + L, 254);
   }
   EEPROM.write(ADDRINITIALISED, 254);
@@ -70,22 +70,22 @@ void Settings::EEPROM_clear() {
 }
 
 /*******************************************************************
-*  EEPROM_storeValue
-*
-* Store an int value at the given EEPROM address
+   EEPROM_storeValue
+
+  Store an int value at the given EEPROM address
 *******************************************************************/
 int Settings::EEPROM_storeValue(int address, int value) {
   EEPROM.write(address, value);
   delay(500);  // delay to prevent crashes during storing data
   EEPROM.commit();
-  
+
   return value;
 }
 
 /*******************************************************************
-*  EEPROM_getValue
-*
-* Retrieve the value from the EEPROM for the given address
+   EEPROM_getValue
+
+  Retrieve the value from the EEPROM for the given address
 *******************************************************************/
 int Settings::EEPROM_getValue(int address) {
   byte val = EEPROM.read(address);

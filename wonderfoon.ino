@@ -1,16 +1,13 @@
 /*--------------------------------------------------------------------------------------------------
- * Wonderfoon D1Mini 1001
- * http://wonderfoon.eu
- * WEMOS version
- * 
- *  REWRITE, derived from https://github.com/hvtil/Wonderfoon_wemos_lolin
- *  - supports 8574 expander for TDK phones
- *  -
- *--------------------------------------------------------------------------------------------------
- */
-#define DEBUGON
-#define VERSION "0.0.1"
+   Wonderfoon
+   http://wonderfoon.eu
+   WEMOS version
 
+    REWRITE, derived from https://github.com/hvtil/Wonderfoon_wemos_lolin
+    - supports 8574 expander for TDK phones
+    - supports rotary discs through pins on the d1 mini
+  --------------------------------------------------------------------------------------------------
+*/
 #include "ESP8266WiFi.h"
 #include "wonderfoon.h"
 #include "mp3player.h"
@@ -18,31 +15,38 @@
 #include "dial.h"
 
 Settings config;
-MP3Player mp3(BUSYPIN);
-Dial dialer; // rotary disc or tdk dialer and pins are determined in dial.h
+MP3Player mp3;
+Dial dialer; // rotary disc or tdk dialer and pins are determined in wonderfoon.h
 
 void setup() {
   delay(100);
-  Serial.begin(9600);                    // start serial for debug and mp3
+  WiFi.disconnect();
+  delay(1);
+  WiFi.forceSleepBegin();
+  delay(1);
+  
+  Serial.begin(9600); // start serial for debug and mp3
   Serial.println("Wonderfoon " VERSION );
 
   mp3.wake();
-  mp3.setVolume(config.getVolume());
   mp3.playPhoneStart();
-  mp3.sleep();                          // set mp3 to battry save mode
+  mp3.setVolume(config.getVolume());
+  mp3.setFolder(config.getFolder());
+  mp3.setRandomPlay(config.isRandom());;
+  mp3.sleep();
   debug("Ready....");
 }
 
 /*******************************************************************
-*  loop
-*
-* main program loop which checks the different situations which could occur
-*******************************************************************/
+   loop
 
+  main program loop which checks the different situations which could occur
+*******************************************************************/
 void loop() {
   dialer.readState();
 
-  // wait for someone to pick up the hook
+  /* wait for someone to pick up the hook
+   */
   if (dialer.hookStateChanged()) {
     if (dialer.isHookPickedUp()) {
       debug("The hook is picked up");
@@ -55,27 +59,41 @@ void loop() {
     }
   }
 
+  /* if a new number is dialed check what to do
+   */
   if (dialer.numberChanged()) {
-    
+    debug(dialer.dialed());
+    /* check if special (command) number and handle that, otherwise play the requested track
+     */
+    if ( !checkDialCommands(dialer.dialed()) ) {
+      int track = dialer.dialed() % 10;
+      /* for compatibility with existing wonderfoon mp3 mapping */
+      if (track == 0) track = 10;
+      debug1("playing track");
+      debug(track);
+      mp3.playTrack(track);
+    }
   }
 
-  /* if continuous play is enabled and the hook is picked up */
+  /* if continuous play is enabled and the hook is picked up
+   */
   if (   mp3.isContinuousPlay()
-      && dialer.isHookPickedUp()) {
-    // and not playing, get the next song
+         && dialer.isHookPickedUp()) {
+    /* and not playing, get the next song
+     */
     if (!mp3.isPlaying()) {
       debug("Check Playing: start next random number");
       delay(1000);
       mp3.playRandom();
     }
-  }  
+  }
 }
 
 
 /*******************************************************************
-*  checkDialCommands
-*
-* check (and execute) commands given by dialing a number
+   checkDialCommands
+
+  check (and execute) commands given by dialing a number
 *******************************************************************/
 bool checkDialCommands(int dialed) {
   int audioVolume = 0;
@@ -120,6 +138,9 @@ bool checkDialCommands(int dialed) {
     case 511:
       debug("continuous random play");
       mp3.setContinuousPlay();
+      return true;
+    case 998:
+      mp3.easter();
       return true;
     case 999:
       debug("reset");

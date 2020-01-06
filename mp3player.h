@@ -16,6 +16,7 @@
 #define FEEDBACK_FOLDER2     12
 #define FEEDBACK_FOLDER3     13
 #define FEEDBACK_VOLUME_BASE 11
+#define FEEDBACK_EASTER      40
 #define FEEDBACK_DIALTONE    99
 #define FEEDBACK_ALARM       112
 
@@ -36,36 +37,36 @@
 #define MP3CMD_DEFAULTDELAY 500
 
 class MP3Player {
- public:
-   MP3Player(int busy=16);
-   void wake();
-   void sleep();
-   void stop();
-   void setFolder(int fol=1);
-   void setVolume(int vol=1);
-   void playTrack(int track=1);
-   boolean isPlaying();
-   void setRandomPlay(boolean rand = false);
-   boolean isRandomPlay();
-   void playRandom();
-   void setContinuousPlay();
-   boolean isContinuousPlay();
+  public:
+    MP3Player();
+    void wake();
+    void sleep();
+    void stop();
+    void setFolder(int fol = 1);
+    void setVolume(int vol = 1);
+    void playTrack(int track = 1);
+    boolean isPlaying();
+    void setRandomPlay(boolean rand = false);
+    boolean isRandomPlay();
+    void playRandom();
+    void setContinuousPlay();
+    boolean isContinuousPlay();
 
-   void playPhoneStart();
-   void dialtone();
-   void alarm();
-   void reset();
-   
- private:
-  boolean randomPlay;
-  boolean continuousPlay;
-  int busyPin;
-  int folder;
-  int track;
-  int volume;
-  
-  void playFeedback(int num);
-  void execute(byte command, byte param1, byte param2, int delayafter);
+    void playPhoneStart();
+    void dialtone();
+    void alarm();
+    void reset();
+    void easter();
+
+  private:
+    boolean randomPlay;
+    boolean continuousPlay;
+    int busyPin;
+    int folder;
+    int track;
+    int volume;
+    void playFeedback(int num);
+    void execute(byte command, byte param1, byte param2, int delayafter);
 };
 
 #endif

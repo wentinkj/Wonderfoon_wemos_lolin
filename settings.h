@@ -9,7 +9,6 @@
 #define ADDRFOLDER      1
 #define ADDRRANDOM      2
 #define ADDRINITIALISED 100
-
 #define EEPROMINITIALISED 77
 
 class Settings {
