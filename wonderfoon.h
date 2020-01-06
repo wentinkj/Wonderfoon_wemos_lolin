@@ -1,3 +1,6 @@
+#ifndef WONDERFOON_H
+#define WONDERFOON_H
+
 #ifdef DEBUGON
 #define debug(text) Serial.println(text)
 #define debug1(text) Serial.print(text)
@@ -6,50 +9,33 @@
 #define debug1(text)
 #endif
 
-// EEPROM defaults
+// Settings: defaults
 #define VOLUMEDEFAULT 15
 #define FOLDERDEFAULT 1
 #define RANDOMDEFAULT false
 
-// (too) small functions
-#define playRandom() playTrackInFolder(random(1, 11), random(1, 4))
+/* Dial: IO configuration
+ * connected to phone hook
+ * connected to rotary disc to detect the dial start
+ * connected to rotary disc to count pulses (dialed digit)
+ * connected to MP3 module busy pin to check if still playing
+ */
+#define HOOKPIN   14
+#define DIALPIN   13
+#define PULSEPIN  12
+#define BUSYPIN   16
 
-// EEPROM
-#define ADDRVOLUME      0
-#define ADDRFOLDER      1
-#define ADDRRANDOM      2
-#define ADDRINITIALISED 100
+// i2c address of the expander
+// port numbers below are those of the expander
+// V1 to 3 are for the vertical columns
+// A1 to 4 are for the rows
+#define EXPANDER  0x20
+#define V1PORT    7
+#define V2PORT    6
+#define V3PORT    5
+#define A1PORT    4
+#define A2PORT    3
+#define A3PORT    2
+#define A4PORT    1
 
-#define EEPROMINITIALISED 77
-
-// feedback ID's -> mp3 song & folder numbers etc
-#define FEEDBACK_FOLDER       4
-
-#define FEEDBACK_CONTINUOUSPLAY 5
-#define FEEDBACK_RESET        6
-#define FEEDBACK_RANDOM_ON    4
-#define FEEDBACK_RANDOM_OFF   3
-
-#define FEEDBACK_PHONE_START 10
-#define FEEDBACK_FOLDER1     11
-#define FEEDBACK_FOLDER2     12
-#define FEEDBACK_FOLDER3     13
-#define FEEDBACK_VOLUME_BASE 11
-#define FEEDBACK_DIALTONE    99
-#define FEEDBACK_ALARM       112
-
-// MP3 commands
-#define MP3CMD_STARTBYTE   0x7E
-#define MP3CMD_ENDBYTE     0xEF
-#define MP3CMD_VERSIONBYTE 0xFF
-#define MP3CMD_LENGTH      0x06
-#define MP3CMD_ACKNOWLEDGE 0x00 //Returns info with command 0x41 [0x01: info, 0x00: no info]
-
-#define MP3CMD_PLAYMODUS   0x09
-#define MP3CMD_PLAYSD      0x02
-#define MP3CMD_SLEEP       0x03
-#define MP3CMD_PLAYTRACK   0x0F
-#define MP3CMD_STOPPLAY    0x16
-#define MP3CMD_VOLUME      0x06
-
-#define MP3CMD_DEFAULTDELAY 500
+#endif
