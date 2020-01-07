@@ -1,0 +1,20 @@
+003     willekeurig afspelen uit
+004     willekeurig afspelen aan
+005     continu afspelen gestart
+006     wonderfoon wordt gereset naar fabrieksinstellingen
+010     wonderfoon is gestart
+011     folder 1 geselecteerd
+012     folder 2 geselecteerd
+013     folder 3 geselecteerd
+021     volume 10%
+022     volume 20%
+023     volume 30%
+024     volume 40%
+025     volume 50%
+026     volume 60%
+027     volume 70%
+028     volume 80%
+029     volume 90%
+030     volume 100%
+099     kiestoon
+112     112 melding
