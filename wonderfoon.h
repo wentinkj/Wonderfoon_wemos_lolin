@@ -1,18 +1,6 @@
 #ifndef WONDERFOON_H
 #define WONDERFOON_H
 
-#define VERSION "0.0.1"
-
-#define DEBUGON
-
-#ifdef DEBUGON
-#define debug(text) Serial.println(text)
-#define debug1(text) Serial.print(text)
-#else
-#define debug(text)
-#define debug1(text)
-#endif
-
 /* Settings: defaults used upon initialisation or reset
  * 
  */

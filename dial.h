@@ -5,23 +5,29 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+/* class Dial
+ *  
+ *  handles everything related to hook and dial functions and stores the last 3 dialed digits
+ *  the ...Changed() methods will reset after calling and will not be set until the state changes again
+ *  
+ */
 class Dial {
   public:
     Dial();
     void readState();
-    boolean hookStateChanged(); // can be read but will reset to false after reading
+    boolean hookStateChanged();
     boolean isHookPickedUp();
-    boolean numberChanged(); // can be read but will reset to false after reading
+    boolean numberChanged();
     int dialed();
 
     #ifdef ROTARY
-    boolean dialStateChanged(); // can be read but will reset to false after reading
+    boolean dialStateChanged();
     boolean isDialing();
-    boolean dialedNumberChanged(); // can be read but will reset to false after reading
-    boolean pulseStateChanged(); // can be read but will reset to false after reading
+    boolean dialedNumberChanged();
+    boolean pulseStateChanged();
     #endif
     #ifdef TDK
-    boolean expanderChanged(); // can be read but will reset to false after reading
+    boolean expanderChanged();
     #endif
  
   private:
@@ -57,7 +63,7 @@ class DebouncePin {
   public:
     DebouncePin(byte pin, int debounce);
     byte read();
-    void reset();
+    void resetLOW();
     
   private:
     byte pin;

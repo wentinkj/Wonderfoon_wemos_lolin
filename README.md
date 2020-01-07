@@ -12,5 +12,6 @@ More info in Dutch on https://www.wonderfoon.eu
 
 This software is rewritten & based on this original software: https://github.com/hvtil/Wonderfoon_wemos_lolin
 
-
-Currently one known bug: for rotary disc phones quite frequently an extra pulse is counted on the start of the dial. Will fix within the next few days.
+Folders 01-04 need to be placed on the SD card.
+And each folder can be populated with 10 mp3 songs named 001 to 010.mp3
+Folder 04 is special as it contains the spoken texts from the phone, the 04_alternatief is an alternative version with a female voice.
