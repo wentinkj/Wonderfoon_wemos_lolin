@@ -35,7 +35,7 @@ class Dial {
     byte dialLast = HIGH;
     byte pulseCurrent = HIGH;
     byte pulseLast = HIGH;
-    byte pulseCount;
+    byte pulseCount = 0;
     #endif
     #ifdef TDK
     byte expanderCurrent = 0;
@@ -57,6 +57,7 @@ class DebouncePin {
   public:
     DebouncePin(byte pin, int debounce);
     byte read();
+    void reset();
     
   private:
     byte pin;

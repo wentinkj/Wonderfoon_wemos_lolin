@@ -69,7 +69,7 @@ void loop() {
       int track = dialer.dialed() % 10;
       /* for compatibility with existing wonderfoon mp3 mapping */
       if (track == 0) track = 10;
-      debug1("playing track");
+      debug1("playing track ");
       debug(track);
       mp3.playTrack(track);
     }

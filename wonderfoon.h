@@ -23,8 +23,8 @@
 /* phone type configuration, TDK or ROTARY
  *  uncomment one
  */
-#define TDK
-//#define ROTARY
+//#define TDK
+#define ROTARY
 
 /* hookpin and busypin are used in TDK & ROTARY
  * connected to phone hook

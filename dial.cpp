@@ -2,10 +2,10 @@
 #include <Wire.h>
 #include "wonderfoon.h"
 
-DebouncePin hookpin(HOOKPIN, 20);
+DebouncePin hookpin(HOOKPIN, 50);
 
 #ifdef ROTARY
-DebouncePin dialpin(DIALPIN, 20);
+DebouncePin dialpin(DIALPIN, 50);
 DebouncePin pulsepin(PULSEPIN, 20);
 #endif
 
@@ -57,13 +57,13 @@ boolean Dial::dialStateChanged() {
 void Dial::readState() {
   this->hookCurrent = hookpin.read();
   this->dialCurrent = dialpin.read();
-  this->pulseCurrent = pulsepin.read();
 
   if (this->isHookPickedUp()) {
     if (this->dialStateChanged()) {
       if (this->isDialing()) {
-        // dial start
+        debug("dial start");
         this->pulseCount = 0;
+        pulsepin.reset();
       } else {
         // dial end
         this->addDigitToPhoneNumber(this->pulseCount);
@@ -72,9 +72,12 @@ void Dial::readState() {
   }
 
   // count pulses when dialing
-  if (   this->isDialing()
-         && this->pulseStateChanged()) {
-    this->pulseCount++;
+  if (   this->isDialing() ) {
+      this->pulseCurrent = pulsepin.read();
+      if (this->pulseStateChanged() && this->pulseCurrent == HIGH) {
+        debug("pulse");
+        this->pulseCount++;
+      }
   }
 }
 #endif
@@ -173,6 +176,12 @@ DebouncePin::DebouncePin(byte pin, int debounce) {
   this->pin = pin;
   this->debounce = debounce;
   pinMode(pin, INPUT_PULLUP);
+}
+
+void DebouncePin::reset() {
+  this->debounceTime = millis();
+  this->currentState = HIGH;
+  this->debounceState = HIGH;
 }
 
 byte DebouncePin::read() {
