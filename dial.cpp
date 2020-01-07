@@ -1,6 +1,8 @@
 #include "dial.h"
-#include <Wire.h>
 #include "wonderfoon.h"
+#include <Wire.h>
+
+#define DEBUG
 #include "debugutils.h"
 
 DebouncePin hookpin(HOOKPIN, 50);
@@ -68,7 +70,8 @@ void Dial::readState() {
         pulsepin.resetLOW();
       } else {
         // dial end
-        DEBUG_PRINTLN("dial end, counted ", this->pulseCount );
+        DEBUG_PRINT("dial end, counted ");
+        DEBUG_PRINTLN(this->pulseCount);
         this->addDigitToPhoneNumber(this->pulseCount);
       }
     }

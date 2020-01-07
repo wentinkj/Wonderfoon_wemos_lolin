@@ -8,13 +8,14 @@
     - supports rotary discs through pins on the d1 mini
   --------------------------------------------------------------------------------------------------
 */
-#include "ESP8266WiFi.h"
-
-#include "version.h"
 #include "wonderfoon.h"
+#include "ESP8266WiFi.h"
+#include "version.h"
 #include "mp3player.h"
 #include "settings.h"
 #include "dial.h"
+
+#define DEBUG
 #include "debugutils.h"
 
 Settings config;
@@ -29,7 +30,7 @@ void setup() {
   delay(1);
   
   Serial.begin(9600); // start serial for debug and mp3
-  Serial.println("Wonderfoon " VERSION );
+  Serial.println("*** Wonderfoon [" VERSION "]  ***");
 
   mp3.wake();
   mp3.playPhoneStart();
@@ -65,14 +66,16 @@ void loop() {
   /* if a new number is dialed check what to do
    */
   if (dialer.numberChanged()) {
-    DEBUG_PRINTLN("combined dialed number", dialer.dialed());
+    DEBUG_PRINT("combined dialed number ");
+    DEBUG_PRINTLN(dialer.dialed());
     /* check if special (command) number and handle that, otherwise play the requested track
      */
     if ( !checkDialCommands(dialer.dialed()) ) {
       int track = dialer.dialed() % 10;
       /* for compatibility with existing wonderfoon mp3 mapping */
       if (track == 0) track = 10;
-      DEBUG_PRINTLN("playing track ", track);
+      DEBUG_PRINT("playing track ");
+      DEBUG_PRINTLN(track);
       mp3.playTrack(track);
     }
   }
@@ -115,7 +118,8 @@ bool checkDialCommands(int dialed) {
     case 219:
     case 220:
       audioVolume = (dialed - 201); // -210 + 9
-      DEBUG_PRINTLN("volume ", audioVolume);
+      DEBUG_PRINT("volume ");
+      DEBUG_PRINTLN(audioVolume);
       mp3.setVolume(audioVolume);
       config.setVolume(audioVolume);
       return true;
@@ -123,7 +127,8 @@ bool checkDialCommands(int dialed) {
     case 312:
     case 313:
       folderNumber = dialed % 10;
-      DEBUG_PRINTLN("set folder to ", folderNumber);
+      DEBUG_PRINT("set folder to ");
+      DEBUG_PRINTLN(folderNumber);
       config.setFolder(folderNumber);
       mp3.setFolder(folderNumber);
       return true;
