@@ -74,10 +74,13 @@ class DebouncePin {
 };
 
 #ifdef TDK
-class DebounceExpander {
+class DebounceTDK {
   public:
-    DebounceExpander(int addr, int debounce);
+    DebounceTDK(int addr, int debounce);
     byte read();
+#ifdef TDK8591
+    byte decodeAnalog(byte adcValue, byte port);
+#endif
     
   private:
     int addr;
@@ -87,4 +90,5 @@ class DebounceExpander {
     long debounceTime; // last time state changed
 };
 #endif
+
 #endif

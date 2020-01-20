@@ -5,6 +5,7 @@
 
     REWRITE, derived from https://github.com/hvtil/Wonderfoon_wemos_lolin
     - supports 8574 expander for TDK phones
+    - supports 8591 expander for TDK phones
     - supports rotary discs through pins on the d1 mini
   --------------------------------------------------------------------------------------------------
 */

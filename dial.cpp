@@ -13,7 +13,7 @@ DebouncePin pulsepin(PULSEPIN, 20);
 #endif
 
 #ifdef TDK
-DebounceExpander expander(EXPANDER, 50);
+DebounceTDK expander(EXPANDER, 50);
 #endif
 
 Dial::Dial() {
@@ -207,13 +207,13 @@ byte DebouncePin::read() {
   return this->currentState;
 }
 
-#ifdef TDK
+#ifdef TDK8574
 /*******************************************************************
-   class: DebounceExpander
+   class: DebounceTDK
 
   simple wrapper to debouce the input from the expander reading all ports as 1 byte
 *******************************************************************/
-DebounceExpander::DebounceExpander(int addr, int debounce) {
+DebounceTDK::DebounceTDK(int addr, int debounce) {
   this->addr = addr;
   this->debounce = debounce;
   Wire.begin();
@@ -223,7 +223,7 @@ DebounceExpander::DebounceExpander(int addr, int debounce) {
   Wire.endTransmission();
 }
 
-byte DebounceExpander::read() {
+byte DebounceTDK::read() {
   if (   this->debounceTime > millis()
       || this->debounceState != this->currentState) {
     this->debounceTime = millis();
@@ -236,6 +236,71 @@ byte DebounceExpander::read() {
     if (Wire.available() == 1) {
       this->currentState = Wire.read() ^ 0xff;
     }
+    if (this->currentState != this->debounceState) {
+      this->debounceTime = millis();
+    }
+  }
+  this->debounceState = this->currentState;
+  return this->currentState;
+}
+#endif
+
+
+#ifdef TDK8591
+/*******************************************************************
+   class: DebounceTDK
+
+  simple wrapper to debouce the input from the expander reading all ports as 1 byte
+*******************************************************************/
+DebounceTDK::DebounceTDK(int addr, int debounce) {
+  this->addr = addr;
+  this->debounce = debounce;
+  Wire.begin();
+}
+
+byte DebounceTDK::decodeAnalog(byte value, byte port) {
+  // V1
+  if (value >  170  && value < 190) { 
+      return 128 | (0x01 << port);
+  }
+  // V2
+  if (value > 60  && value < 90) { 
+      return 64 | (0x01 << port);
+  }
+  // V3
+  if (value > 90  && value < 120) { 
+    return 32 | (0x01 << port);
+  }
+  return 0;
+}
+
+byte DebounceTDK::read() {
+  byte adcvalue0, adcvalue1, adcvalue2, adcvalue3;
+  
+  if (   this->debounceTime > millis()
+      || this->debounceState != this->currentState) {
+    this->debounceTime = millis();
+  }
+
+  if (millis() - this->debounceTime > this->debounce) {
+    this->currentState = 0;
+
+    Wire.beginTransmission(this->addr);
+    Wire.write(0x04);  // control byte - read ADC0 then auto-increment
+    Wire.endTransmission();
+    Wire.requestFrom(this->addr, 5); // request 5 bytes of data
+
+    adcvalue0=Wire.read(); // ignore the first (AOUT)
+    adcvalue0=Wire.read();
+    adcvalue1=Wire.read();
+    adcvalue2=Wire.read();
+    adcvalue3=Wire.read();
+
+    this->currentState = this->decodeAnalog(adcvalue0, 1)
+                       | this->decodeAnalog(adcvalue1, 2)
+                       | this->decodeAnalog(adcvalue2, 3)
+                       | this->decodeAnalog(adcvalue3, 4);
+ 
     if (this->currentState != this->debounceState) {
       this->debounceTime = millis();
     }
