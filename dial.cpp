@@ -236,6 +236,27 @@ byte DebounceTDK::read() {
     if (Wire.available() == 1) {
       this->currentState = Wire.read() ^ 0xff;
     }
+    // due to noise, try to reduce to only valid combinations.. ignore other readings
+    switch (this->currentState) {
+      case (0x01 << V1PORT) + (0x01 << A1PORT):
+      case (0x01 << V1PORT) + (0x01 << A2PORT):
+      case (0x01 << V1PORT) + (0x01 << A3PORT):
+      case (0x01 << V1PORT) + (0x01 << A4PORT):
+      case (0x01 << V2PORT) + (0x01 << A1PORT):
+      case (0x01 << V2PORT) + (0x01 << A2PORT):
+      case (0x01 << V2PORT) + (0x01 << A3PORT):
+      case (0x01 << V2PORT) + (0x01 << A4PORT):
+      case (0x01 << V3PORT) + (0x01 << A1PORT):
+      case (0x01 << V3PORT) + (0x01 << A2PORT):
+      case (0x01 << V3PORT) + (0x01 << A3PORT):
+      case (0x01 << V3PORT) + (0x01 << A4PORT):
+      case (0x01 << EASTERPORT):
+      break;
+      default:
+      this->currentState = 0;
+      break;
+    }
+    
     if (this->currentState != this->debounceState) {
       this->debounceTime = millis();
     }

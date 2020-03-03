@@ -11,8 +11,8 @@
 /* phone type configuration, TDK8591, TDK8574 or ROTARY
  *  uncomment one
  */
-#define TDK8591
-//#define TDK8574
+//#define TDK8591
+#define TDK8574
 //#define ROTARY
 
 /* hookpin and busypin are used in TDK & ROTARY
@@ -43,9 +43,9 @@
 #define EXPANDER  0x20
 #define V1PORT    7
 #define V2PORT    6
-#define V3PORT    3
-#define A1PORT    5
-#define A2PORT    4
+#define V3PORT    5
+#define A1PORT    4
+#define A2PORT    3
 #define A3PORT    2
 #define A4PORT    1
 #define EASTERPORT 0
